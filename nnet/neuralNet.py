@@ -21,12 +21,14 @@ class NeuralNetwork:
 
     def backward(self, X, Y):
         """Backpropagate through the network for input X and output Y."""
-        passBack = self.loss.backward(X,Y)
-        gradList = []
+        passBack = self.loss.backward(self.forward(X),Y)
+        WList = []
+        bList = []
         for layer in reversed(self.layers):
-            passBack = layer.backward(passBack)
-            gradList.append(passBack)
-        return gradList
+            dW, db, passBack = layer.backward(passBack, X)
+            WList.append(dW)
+            bList.append(db)
+        return WList, bList
 
 
 
