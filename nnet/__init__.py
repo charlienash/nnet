@@ -2,11 +2,13 @@ from .neuralNet import (
     NeuralNetwork
 )
 from .layers import (
-    Linear
+    Linear,
+    Sigmoid
 )
 from .lossFunctions import (
     squaredError
 )
+
 
 __all__ = [
     'NeuralNetwork',
