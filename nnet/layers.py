@@ -24,16 +24,21 @@ class Linear(Layer):
         self.W = np.random.rand(outputDim, inputDim)
         self.b = np.random.rand(outputDim)
         self.activation = np.empty(inputDim)
+        self.hasParams = True
 
     def forward(self, X, storeActivation=False):
         if storeActivation:           
             self.activation = X
-        return self.W.dot(X) + self.b
+        return X.dot(self.W.T) + self.b
 
     def backward(self, backGrad):
-        dW = np.outer(backGrad, self.activation)
-        db = backGrad
-        inputGrad = self.W.T.dot(backGrad)
+        dW = np.mean(backGrad.T[:,np.newaxis,:] * 
+                    self.activation.T[np.newaxis,:,:], axis=2)
+#        dW = np.outer(backGrad, self.activation)
+        db = np.mean(backGrad, axis=0).T
+#        inputGrad = self.W.T.dot(backGrad[:,:,np.newaxis])[:,:,0].T
+        inputGrad = backGrad.dot(self.W)
+#        inputGrad = self.W.T.dot(backGrad)
         return dW, db, inputGrad
         
 class Sigmoid(Layer):
@@ -41,9 +46,11 @@ class Sigmoid(Layer):
     
     def __init__(self):
         self.activation = None
+        self.hasParams = False
 
-    def forward(self, X):
-        self.activation = X
+    def forward(self, X, storeActivation=False):
+        if storeActivation:           
+            self.activation = X
         return sigmoid(X)
 
     def backward(self, backGrad):
@@ -58,16 +65,18 @@ class ReLu(Layer):
     
     def __init__(self):
         self.activation = None
+        self.hasParams = False
 
-    def forward(self, X):
-        self.activation = X
+    def forward(self, X, storeActivation=False):
+        if storeActivation:           
+            self.activation = X
         return (X + np.abs(X))/2
 
     def backward(self, backGrad):
         X = self.activation
         dW = None
         db = None
-        inputGrad = backGrad*(0.5 + np.abs(X)*0.5) # Element-wise product
+        inputGrad = backGrad*(0.5 + np.sign(X)*0.5) # Element-wise product
         return dW, db, inputGrad
     
     
