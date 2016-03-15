@@ -9,8 +9,11 @@ class Layer:
 
     def forward(self, input):
         raise NotImplementedError()
+        
+    def _forward(self, input):
+        raise NotImplementedError()
 
-    def backward(self, grad):
+    def _backward(self, grad):
         raise NotImplementedError()
 
 
@@ -26,16 +29,19 @@ class Linear(Layer):
         self.activation = np.empty(inputDim)
         self.hasParams = True
 
-    def forward(self, X, storeActivation=False):
+    def forward(self, X):
+        return X.dot(self.W.T) + self.b
+        
+    def _forward(self, X, storeActivation=False):
         if storeActivation:           
             self.activation = X
         return X.dot(self.W.T) + self.b
 
-    def backward(self, backGrad):
-        dW = np.mean(backGrad.T[:,np.newaxis,:] * 
+    def _backward(self, backGrad):
+        dW = np.sum(backGrad.T[:,np.newaxis,:] * 
                     self.activation.T[np.newaxis,:,:], axis=2)
 #        dW = np.outer(backGrad, self.activation)
-        db = np.mean(backGrad, axis=0).T
+        db = np.sum(backGrad, axis=0).T
 #        inputGrad = self.W.T.dot(backGrad[:,:,np.newaxis])[:,:,0].T
         inputGrad = backGrad.dot(self.W)
 #        inputGrad = self.W.T.dot(backGrad)
@@ -47,13 +53,16 @@ class Sigmoid(Layer):
     def __init__(self):
         self.activation = None
         self.hasParams = False
+        
+    def forward(self, X):
+        return sigmoid(X)
 
-    def forward(self, X, storeActivation=False):
+    def _forward(self, X, storeActivation=False):
         if storeActivation:           
             self.activation = X
         return sigmoid(X)
 
-    def backward(self, backGrad):
+    def _backward(self, backGrad):
         X = self.activation
         dW = None
         db = None
@@ -67,16 +76,47 @@ class ReLu(Layer):
         self.activation = None
         self.hasParams = False
 
-    def forward(self, X, storeActivation=False):
+    def forward(self, X):
+        return (X + np.abs(X))/2
+        
+    def _forward(self, X, storeActivation=False):
         if storeActivation:           
             self.activation = X
         return (X + np.abs(X))/2
 
-    def backward(self, backGrad):
+    def _backward(self, backGrad):
         X = self.activation
         dW = None
         db = None
         inputGrad = backGrad*(0.5 + np.sign(X)*0.5) # Element-wise product
         return dW, db, inputGrad
+        
+class SoftMax(Layer):
+    """Doc-string"""
+    
+    def __init__(self):
+        self.activation = None
+        self.hasParams = False
+
+    def forward(self, X):
+        return np.exp(X) / np.sum(np.exp(X), axis=1)[:,np.newaxis]
+        
+    def _forward(self, X, storeActivation=False):
+        if storeActivation:           
+            self.activation = X
+        return np.exp(X) / np.sum(np.exp(X), axis=1)[:,np.newaxis]
+
+    def _backward(self, backGrad):
+        X = self.activation
+        m = np.shape(X)[1]
+        Y = self.forward(X) # softmaxed activations
+        dW = None
+        db = None
+        
+        Jac = -Y[:,:,np.newaxis]*Y[:,np.newaxis,:]
+        di = np.diag_indices(m,2)
+        Jac[:,di[0], di[1]] = Jac[:,di[0], di[1]] + Y
+        inputGrad = np.sum(Jac*backGrad[:,np.newaxis,:], axis=2)
+        return dW, db, inputGrad   
     
     
